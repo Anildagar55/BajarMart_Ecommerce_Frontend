@@ -16,7 +16,7 @@ export default function Login() {
     setError("");
     try {
       if (mode === "login") {
-        await login(form.email, form.password);
+        await login(form.email, form.password,"USER");
         navigate("/");
       } else {
         await signup(form);

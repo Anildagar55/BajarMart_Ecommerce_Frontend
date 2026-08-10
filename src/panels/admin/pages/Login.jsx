@@ -18,12 +18,8 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
     try {
-      const data = await login(loginForm.email, loginForm.password);
-      if (data.role !== "ADMIN") {
-        logout();
-        setError("This account doesn't have administrator access.");
-        return;
-      }
+      const data = await login(loginForm.email, loginForm.password,"ADMIN");
+
       navigate("/admin/dashboard");
     } catch (err) {
       setError(err.response?.data?.error || "Invalid email or password.");

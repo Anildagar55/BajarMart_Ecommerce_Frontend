@@ -18,12 +18,8 @@ export default function SellerLogin() {
     e.preventDefault();
     setError("");
     try {
-      const data = await login(loginForm.email, loginForm.password);
-      if (data.role !== "SELLER" && data.role !== "ADMIN") {
-        logout();
-        setError("This account isn't registered as a seller. Use \"Register your business\" below.");
-        return;
-      }
+      const data = await login(loginForm.email, loginForm.password,"SELLER");
+
       navigate("/seller/dashboard");
     } catch (err) {
       setError(err.response?.data?.error || "Invalid email or password.");

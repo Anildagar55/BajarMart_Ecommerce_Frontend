@@ -1,9 +1,10 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Gauge, Store, Users, LogOut, Radar } from "lucide-react";
+import { Gauge, Store, Users, LogOut, Radar, ClipboardList } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
   { to: "/admin/dashboard", label: "Overview", icon: Gauge },
+  { to: "/admin/orders", label: "Orders", icon: ClipboardList },
   { to: "/admin/sellers", label: "Sellers", icon: Store },
   { to: "/admin/users", label: "Users", icon: Users },
 ];
@@ -39,7 +40,8 @@ export default function AdminLayout() {
         </nav>
         <div className="px-6 py-5 border-t border-white/5 text-xs text-console-mist/60">
           <p className="mb-2 text-white/80">{user?.name}</p>
-          <button onClick={() => { logout(); navigate("/admin/login"); }} className="flex items-center gap-1.5 hover:text-console-crimson">
+          <button onClick={() => {  logout("ADMIN");
+                                       navigate("/admin/login", { replace: true });}} className="flex items-center gap-1.5 hover:text-console-crimson">
             <LogOut size={13} /> Sign out
           </button>
         </div>

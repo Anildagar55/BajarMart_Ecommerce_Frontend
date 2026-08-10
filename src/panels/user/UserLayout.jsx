@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ShoppingBag, Search, User, Store, Menu, X, Package, MapPin } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
-
+import Address from "./pages/Address.jsx";
 const CATEGORIES = ["Fashion", "Home & Living", "Beauty", "New Arrivals", "Deals"];
 
 export default function UserLayout() {
@@ -18,6 +18,7 @@ export default function UserLayout() {
     navigate(searchTerm.trim() ? `/products?q=${encodeURIComponent(searchTerm.trim())}` : "/products");
     setMenuOpen(false);
   };
+
 
   return (
     <div className="min-h-screen bg-bazaar-bg font-bazaar text-bazaar-ink">
@@ -61,7 +62,8 @@ export default function UserLayout() {
                   <Package size={18} />
                   <span className="text-[10px] mt-0.5">Orders</span>
                 </Link>
-                <button onClick={() => { logout(); navigate("/"); }} className="hidden sm:flex flex-col items-center leading-tight hover:text-bazaar-gold">
+                <button onClick={() => { logout("USER");
+                                             navigate("/login", { replace: true }); }} className="hidden sm:flex flex-col items-center leading-tight hover:text-bazaar-gold">
                   <User size={18} />
                   <span className="text-[10px] mt-0.5">Sign out</span>
                 </button>

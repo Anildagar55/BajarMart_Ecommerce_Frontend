@@ -26,7 +26,12 @@ export default function SellerDashboard() {
     api.get(`/dashboard/seller/${sellerId}`).then((res) => setStats(res.data)).catch(() => {});
     api.get(`/order/sellers/${sellerId}`).then((res) => setOrders(res.data.slice(0, 5))).catch(() => {});
   }, [sellerId]);
+const { logout } = useAuth();
 
+const handleLogout = () => {
+    logout("SELLER");
+    navigate("/seller/login", { replace: true });
+};
   const cards = [
     { label: "Total Products", value: stats.totalProducts, icon: Package },
     { label: "Total Orders", value: stats.totalOrders, icon: ClipboardList },

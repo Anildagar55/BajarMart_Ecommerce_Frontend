@@ -42,7 +42,7 @@ function SellerLayoutInner() {
         </nav>
         <div className="px-6 py-5 border-t border-white/10 text-xs text-ledger-paper/50">
           <p className="mb-2">{user?.name}</p>
-          <button onClick={() => { logout(); navigate("/seller/login"); }} className="flex items-center gap-1.5 hover:text-ledger-copper">
+          <button onClick={() => { logout("SELLER"); navigate("/seller/login",{replace:true}); }} className="flex items-center gap-1.5 hover:text-ledger-copper">
             <LogOut size={14} /> Sign out
           </button>
         </div>

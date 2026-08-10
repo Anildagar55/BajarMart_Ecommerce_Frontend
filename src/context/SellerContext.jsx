@@ -1,43 +1,86 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "./AuthContext";
 
 const SellerContext = createContext(null);
 
-/**
- * JWT sirf userId carry karta hai, sellerId nahi (User aur Seller alag entities hain,
- * OneToOne linked). Har seller page ko apna real sellerId chahiye — ye Context ek hi
- * baar resolve karke sab child pages ko de deta hai.
- */
 export function SellerProvider({ children }) {
-  const { user } = useAuth();
-  const [seller, setSeller] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-          console.log("User =", user);
+    // IMPORTANT:
+    // Seller pages ke liye seller session use karo
+    const { seller } = useAuth();
 
-    if (!user?.userId) { setLoading(false); return; }
-    api.get(`/seller/by-user/${user.userId}`)
-      .then((res) =>{            console.log("Seller Response =", res.data);
- setSeller(res.data)})
-      .catch((err) => {  console.log("Seller API Error:", err.response?.status);
-                           console.log("Seller API Data:", err.response?.data);
+    const [sellerProfile, setSellerProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-          setSeller(null)
-          })
-      .finally(() => setLoading(false));
-  }, [user]);
+    useEffect(() => {
 
-  return (
-    <SellerContext.Provider value={{ seller, sellerId: seller?.id, loading }}>
-      {children}
-    </SellerContext.Provider>
-  );
+        console.log("Seller Auth =", seller);
+
+        if (!seller?.userId) {
+            setSellerProfile(null);
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+
+        api.get(`/seller/by-user/${seller.userId}`)
+
+            .then((res) => {
+
+                console.log("Seller Response =", res.data);
+
+                setSellerProfile(res.data);
+            })
+
+            .catch((err) => {
+
+                console.log(
+                    "Seller API Error:",
+                    err.response?.status
+                );
+
+                console.log(
+                    "Seller API Data:",
+                    err.response?.data
+                );
+
+                setSellerProfile(null);
+            })
+
+            .finally(() => {
+                setLoading(false);
+            });
+
+    }, [seller]);
+
+
+    return (
+        <SellerContext.Provider
+            value={{
+                seller: sellerProfile,
+                sellerId: sellerProfile?.id,
+                loading
+            }}
+        >
+            {children}
+        </SellerContext.Provider>
+    );
 }
+
 
 export function useSeller() {
-  const ctx = useContext(SellerContext);
-  if (!ctx) throw new Error("useSeller must be used inside SellerProvider");
-  return ctx;
+
+    const ctx = useContext(SellerContext);
+
+    if (!ctx) {
+        throw new Error(
+            "useSeller must be used inside SellerProvider"
+        );
+    }
+
+    return ctx;
 }
+
