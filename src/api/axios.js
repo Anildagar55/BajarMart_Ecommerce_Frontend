@@ -29,7 +29,6 @@ api.interceptors.request.use((config) => {
         url.startsWith("/auth/login") ||
         url.startsWith("/auth/register") ||
         url.startsWith("/users/signup")
-
     ) {
         return config;
     }
@@ -43,7 +42,12 @@ api.interceptors.request.use((config) => {
         url.startsWith("/admin") ||
         url.startsWith("/dashboard/admin")||
             url.startsWith("/order/all")||
-                url.startsWith("/users/all")
+                url.startsWith("/users/all")||
+                url.startsWith("/order/update")||
+                    url.startsWith("/seller/all")||
+                      url.startsWith("/order")||
+                                  url.startsWith("/payment")
+
     ) {
 
         token = localStorage.getItem(
@@ -62,7 +66,10 @@ api.interceptors.request.use((config) => {
         url.startsWith("/products") ||
             url.startsWith("/variant") ||
     url.startsWith("/order/advance")||
-        url.startsWith("/order/sellers")
+        url.startsWith("/order/sellers")||
+               url.startsWith("/products/create")
+
+
     ) {
 
         token = localStorage.getItem(
@@ -122,7 +129,11 @@ api.interceptors.response.use(
                 url.startsWith("/admin") ||
                 url.startsWith("/dashboard/admin")||
                     url.startsWith("/order/all")||
-                        url.startsWith("/users/all")
+                        url.startsWith("/users/all")||
+                                            url.startsWith("/seller/all")||
+                                              url.startsWith("/order")||
+                                               url.startsWith("/payment")
+
             ) {
 
                 localStorage.removeItem(

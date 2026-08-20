@@ -24,6 +24,7 @@ const FALLBACK_CATEGORIES = ["Fashion", "Home & Living", "Beauty"];
 export default function ProductListing() {
   const [allProducts, setAllProducts] = useState(FALLBACK_PRODUCTS);
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
+  const [categoryTree, setCategoryTree] = useState([]); // full list, used to resolve parent → children names
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -36,7 +37,12 @@ export default function ProductListing() {
 
   useEffect(() => {
     api.get("/category").then((res) => {
-      const names = (res.data || []).map((c) => c.name).filter(Boolean);
+      const all = res.data || [];
+      setCategoryTree(all);
+      // Sirf leaf categories dikhao — products hamesha child-level pe tagged hote hain
+      // (jaise "Men"/"Women"), parent-level ("Fashion") filter se koi match nahi milega
+      const leaves = all.filter((c) => c.parentId).map((c) => c.name).filter(Boolean);
+      const names = leaves.length > 0 ? leaves : all.map((c) => c.name).filter(Boolean);
       if (names.length > 0) setCategories(names);
     }).catch(() => {});
   }, []);
@@ -44,7 +50,7 @@ export default function ProductListing() {
   useEffect(() => {
     setLoading(true);
     const endpoint = keyword ? "/products/search" : "/products";
-    const params = keyword ? { keyword, page: 0, size: 48 } : { page: 0, size: 48 };
+    const params = keyword ? { keyword, page: 0, size: 1000 } : { page: 0, size: 1000 };
 
     api.get(endpoint, { params })
       .then((res) => {
@@ -69,7 +75,15 @@ export default function ProductListing() {
 
   const filtered = useMemo(() => {
     let list = [...allProducts];
-    if (selectedCategory) list = list.filter((p) => p.categoryName === selectedCategory);
+    if (selectedCategory) {
+      // selectedCategory ek parent ho sakta hai (mega-menu se, jaise "Fashion") — us case me
+      // uske saare child category names resolve karke match karo, exact leaf-name match ke sath-sath
+      const childNames = categoryTree
+        .filter((c) => c.parentName === selectedCategory)
+        .map((c) => c.name);
+      const matchSet = new Set([selectedCategory, ...childNames]);
+      list = list.filter((p) => matchSet.has(p.categoryName));
+    }
     if (minPrice) list = list.filter((p) => p.basePrice >= Number(minPrice));
     if (maxPrice) list = list.filter((p) => p.basePrice <= Number(maxPrice));
 
@@ -78,7 +92,7 @@ export default function ProductListing() {
     else if (sort === "name_asc") list.sort((a, b) => a.title.localeCompare(b.title));
 
     return list;
-  }, [allProducts, selectedCategory, minPrice, maxPrice, sort]);
+  }, [allProducts, selectedCategory, categoryTree, minPrice, maxPrice, sort]);
 
   const activeFilterCount = [selectedCategory, minPrice, maxPrice].filter(Boolean).length;
 

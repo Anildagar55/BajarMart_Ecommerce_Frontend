@@ -21,13 +21,10 @@ export default function SellerProducts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-        console.log("sellerId", sellerId);
-
     if (!sellerId) return;
     api.get(`/products/seller/${sellerId}`)
-      .then((res) =>{  console.log(res.data); setProducts(res.data?.length ? res.data : FALLBACK)})
-      .catch(() =>{      console.log(err.response);
-  setProducts(FALLBACK)})
+      .then((res) => setProducts(res.data?.length ? res.data : FALLBACK))
+      .catch(() => setProducts(FALLBACK))
       .finally(() => setLoading(false));
   }, [sellerId]);
 
@@ -69,6 +66,7 @@ export default function SellerProducts() {
                 <th className="px-6 py-3 font-normal">Item</th>
                 <th className="px-6 py-3 font-normal">Category</th>
                 <th className="px-6 py-3 font-normal">Price</th>
+                <th className="px-6 py-3 font-normal">Discount</th>
                 <th className="px-6 py-3 font-normal">Status</th>
                 <th className="px-6 py-3 font-normal text-right">Actions</th>
               </tr>
@@ -83,12 +81,19 @@ export default function SellerProducts() {
                   <td className="px-6 py-3.5 text-ledger-slate/60">{p.categoryName}</td>
                   <td className="px-6 py-3.5 font-mono">{formatINR(p.basePrice)}</td>
                   <td className="px-6 py-3.5">
+                    {p.discountPercent > 0 ? (
+                      <span className="text-xs text-ledger-sage font-medium">{p.discountPercent}% off</span>
+                    ) : (
+                      <span className="text-xs text-ledger-slate/30">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3.5">
                     <span className={`text-xs px-2 py-1 rounded-sm ${
                       p.status === "ACTIVE" ? "bg-ledger-sage/10 text-ledger-sage" : "bg-red-100 text-red-600"
                     }`}>{p.status}</span>
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <button className="text-ledger-slate/40 hover:text-ledger-copper mr-3"><Pencil size={15} /></button>
+                    <Link to={`/seller/products/${p.id}/edit`} className="text-ledger-slate/40 hover:text-ledger-copper mr-3 inline-block"><Pencil size={15} /></Link>
                     <button onClick={() => deleteProduct(p.id)} className="text-ledger-slate/40 hover:text-red-600"><Trash2 size={15} /></button>
                   </td>
                 </tr>

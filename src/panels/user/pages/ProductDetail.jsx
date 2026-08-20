@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Star, Truck, RotateCcw, ShieldCheck, Minus, Plus } from "lucide-react";
 import api from "../../../api/axios";
-import { productImage, withDiscount } from "../../../utils/placeholderImage";
+import { productImage } from "../../../utils/placeholderImage";
 import { useCart } from "../../../context/CartContext";
 import { useToast } from "../../../context/ToastContext";
+import { useAuth } from "../../../context/AuthContext";
 
 function formatINR(n) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
@@ -21,8 +22,16 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
   const [reviews, setReviews] = useState([]);
+  const [canReview, setCanReview] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ rating: 0, comment: "" });
+  const [submittingReview, setSubmittingReview] = useState(false);
   const { addItem } = useCart();
   const { showToast } = useToast();
+  const { user } = useAuth();
+
+  const loadReviews = () => {
+    api.get(`/reviews/product/${id}`).then((res) => setReviews(res.data || [])).catch(() => setReviews([]));
+  };
 
   useEffect(() => {
     setSelectedVariant(null);
@@ -31,8 +40,9 @@ export default function ProductDetail() {
     api.get(`/products/${id}`).then((res) => setProduct(res.data)).catch(() => {
       setProduct({
         id, title: "Hand-thrown Ceramic Vase",
-        description: "Thrown on the wheel in small batches by a third-generation potter. Each piece carries small, deliberate variations — a mark of being made by hand, not a machine.",
-        basePrice: 2400, categoryName: "Home & Living", sellerName: "Kāya Pottery Studio", sellerId: 1,
+        description: "Thrown on the wheel in small batches by a third-generation potter.",
+        basePrice: 2400, mrp: 2400, discountPercent: 0, categoryName: "Home & Living",
+        sellerName: "Kāya Pottery Studio", sellerId: 1,
         imageUrl: "https://picsum.photos/seed/vase01/700/700",
       });
     });
@@ -43,8 +53,15 @@ export default function ProductDetail() {
       if (list.length === 1) setSelectedVariant(list[0]);
     }).catch(() => setVariants([]));
 
-    api.get(`/reviews/product/${id}`).then((res) => setReviews(res.data || [])).catch(() => setReviews([]));
+    loadReviews();
   }, [id]);
+
+  useEffect(() => {
+    if (!user) { setCanReview(false); return; }
+    api.get("/reviews/can-review", { params: { userId: user.userId, productId: id } })
+      .then((res) => setCanReview(res.data === true))
+      .catch(() => setCanReview(false));
+  }, [user, id]);
 
   const addToCart = () => {
     if (variants.length === 0) {
@@ -71,10 +88,32 @@ export default function ProductDetail() {
     showToast(`Added ${qty} to your cart`);
   };
 
+  const submitReview = async (e) => {
+    e.preventDefault();
+    if (reviewForm.rating === 0) {
+      showToast("Please select a star rating", "error");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      await api.post("/reviews", { userId: user.userId, productId: id, rating: reviewForm.rating, comment: reviewForm.comment });
+      showToast("Thanks for your review!");
+      setReviewForm({ rating: 0, comment: "" });
+      setCanReview(false);
+      loadReviews();
+      api.get(`/products/${id}`).then((res) => setProduct(res.data)).catch(() => {}); // refresh avg rating
+    } catch (err) {
+      showToast(err.response?.data?.error || "Couldn't submit review.", "error");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   if (!product) return <div className="max-w-7xl mx-auto px-6 py-24 text-center text-bazaar-sub">Loading…</div>;
 
   const displayPrice = selectedVariant?.price ?? product.basePrice;
-  const { original, pct } = withDiscount(displayPrice, product.id ?? 1);
+  const hasDiscount = product.discountPercent > 0 && product.mrp > displayPrice;
+  const hasRating = product.reviewCount > 0 && product.averageRating != null;
   const outOfStock = selectedVariant && selectedVariant.stockQuantity === 0;
   const unavailable = variants.length === 0;
 
@@ -89,17 +128,25 @@ export default function ProductDetail() {
           <p className="text-xs font-semibold text-bazaar-primary uppercase tracking-wide mb-2">{product.categoryName}</p>
           <h1 className="font-bazaar font-bold text-xl md:text-2xl text-bazaar-ink leading-snug">{product.title}</h1>
 
-          <div className="flex items-center gap-2 mt-2.5">
-            <span className="flex items-center gap-0.5 bg-bazaar-success text-white text-xs font-semibold px-1.5 py-0.5 rounded">
-              4.3 <Star size={10} fill="white" />
-            </span>
-            <span className="text-xs text-bazaar-sub">{reviews.length || 128} ratings</span>
-          </div>
+          {hasRating ? (
+            <div className="flex items-center gap-2 mt-2.5">
+              <span className="flex items-center gap-0.5 bg-bazaar-success text-white text-xs font-semibold px-1.5 py-0.5 rounded">
+                {product.averageRating.toFixed(1)} <Star size={10} fill="white" />
+              </span>
+              <span className="text-xs text-bazaar-sub">{product.reviewCount} rating{product.reviewCount !== 1 ? "s" : ""}</span>
+            </div>
+          ) : (
+            <p className="text-xs text-bazaar-sub mt-2.5">No ratings yet</p>
+          )}
 
           <div className="flex items-baseline gap-2 mt-4 flex-wrap">
             <span className="font-bazaar font-extrabold text-2xl md:text-3xl text-bazaar-ink">{formatINR(displayPrice)}</span>
-            <span className="text-sm text-bazaar-sub line-through">{formatINR(original)}</span>
-            <span className="text-sm text-bazaar-success font-bold">{pct}% off</span>
+            {hasDiscount && (
+              <>
+                <span className="text-sm text-bazaar-sub line-through">{formatINR(product.mrp)}</span>
+                <span className="text-sm text-bazaar-success font-bold">{product.discountPercent}% off</span>
+              </>
+            )}
           </div>
           <p className="text-xs text-bazaar-sub mt-1">Inclusive of all taxes</p>
 
@@ -163,6 +210,32 @@ export default function ProductDetail() {
             </div>
           </div>
 
+          {/* Review submission — sirf tab dikhta hai jab is product ka delivered order ho aur pehle review na kiya ho */}
+          {canReview && (
+            <div className="mt-8 pt-6 border-t border-bazaar-border">
+              <h3 className="font-bazaar font-bold text-base text-bazaar-ink mb-3">Rate this product</h3>
+              <form onSubmit={submitReview} className="bg-bazaar-bg rounded-md p-4">
+                <div className="flex items-center gap-1 mb-3">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button type="button" key={n} onClick={() => setReviewForm({ ...reviewForm, rating: n })}>
+                      <Star size={22} className={n <= reviewForm.rating ? "text-bazaar-gold" : "text-bazaar-border"} fill={n <= reviewForm.rating ? "currentColor" : "none"} />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  placeholder="Share your experience with this product…"
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  rows={3}
+                  className="w-full border border-bazaar-border rounded-md px-3 py-2 text-sm outline-none focus:border-bazaar-primary bg-white"
+                />
+                <button type="submit" disabled={submittingReview} className="mt-3 bg-bazaar-primary text-white text-xs font-semibold px-5 py-2.5 rounded-md disabled:opacity-50">
+                  {submittingReview ? "Submitting…" : "Submit Review"}
+                </button>
+              </form>
+            </div>
+          )}
+
           {reviews.length > 0 && (
             <div className="mt-8 pt-6 border-t border-bazaar-border">
               <h3 className="font-bazaar font-bold text-base text-bazaar-ink mb-3">Ratings &amp; Reviews</h3>
@@ -173,7 +246,7 @@ export default function ProductDetail() {
                       {r.userName}
                       <span className="flex items-center gap-0.5 bg-bazaar-success text-white text-[10px] font-semibold px-1 py-0.5 rounded">{r.rating} <Star size={8} fill="white" /></span>
                     </p>
-                    <p className="text-bazaar-sub mt-0.5">{r.comment}</p>
+                    {r.comment && <p className="text-bazaar-sub mt-0.5">{r.comment}</p>}
                   </div>
                 ))}
               </div>

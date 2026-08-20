@@ -1,15 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 import { useSeller } from "../../../context/SellerContext";
 
 export default function AddProduct() {
   const { sellerId, seller, loading: sellerLoading } = useSeller();
-  const [form, setForm] = useState({ title: "", description: "", basePrice: "", categoryId: "", imageUrl: "", initialStock: "10" });
+  const [form, setForm] = useState({ title: "", description: "", basePrice: "", mrp: "", categoryId: "", imageUrl: "", initialStock: "10" });
+  const [categories, setCategories] = useState([]);
   const [status, setStatus] = useState(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    api.get("/category").then((res) => setCategories(res.data || [])).catch(() => {});
+  }, []);
+
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const discountPreview = (() => {
+    const price = Number(form.basePrice);
+    const mrp = Number(form.mrp);
+    if (!price || !mrp || mrp <= price) return null;
+    return Math.round(((mrp - price) / mrp) * 100);
+  })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,6 +31,7 @@ export default function AddProduct() {
         title: form.title,
         description: form.description,
         basePrice: Number(form.basePrice),
+        mrp: form.mrp ? Number(form.mrp) : undefined,
         category_id: Number(form.categoryId),
         sellerId,
         imageUrl: form.imageUrl || undefined,
@@ -65,6 +78,16 @@ export default function AddProduct() {
             className="w-full border border-ledger-slate/15 px-3.5 py-2.5 text-sm rounded-sm outline-none focus:border-ledger-copper" />
         </div>
         <div>
+          <label className="block text-xs uppercase tracking-wider text-ledger-slate/50 mb-1.5">Category</label>
+          <select name="categoryId" value={form.categoryId} onChange={handleChange} required
+            className="w-full border border-ledger-slate/15 px-3.5 py-2.5 text-sm rounded-sm outline-none focus:border-ledger-copper bg-white">
+            <option value="">Select a category…</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.parentName ? `${c.parentName} — ${c.name}` : c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label className="block text-xs uppercase tracking-wider text-ledger-slate/50 mb-1.5">Image URL</label>
           <input name="imageUrl" value={form.imageUrl} onChange={handleChange} placeholder="https://…"
             className="w-full border border-ledger-slate/15 px-3.5 py-2.5 text-sm rounded-sm outline-none focus:border-ledger-copper" />
@@ -72,16 +95,21 @@ export default function AddProduct() {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs uppercase tracking-wider text-ledger-slate/50 mb-1.5">Price (₹)</label>
+            <label className="block text-xs uppercase tracking-wider text-ledger-slate/50 mb-1.5">Selling Price (₹)</label>
             <input name="basePrice" type="number" value={form.basePrice} onChange={handleChange} required
               className="w-full border border-ledger-slate/15 px-3.5 py-2.5 text-sm rounded-sm outline-none focus:border-ledger-copper font-mono" />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wider text-ledger-slate/50 mb-1.5">Category ID</label>
-            <input name="categoryId" type="number" value={form.categoryId} onChange={handleChange} required
+            <label className="block text-xs uppercase tracking-wider text-ledger-slate/50 mb-1.5">MRP (₹)</label>
+            <input name="mrp" type="number" value={form.mrp} onChange={handleChange} placeholder="Same as price if blank"
               className="w-full border border-ledger-slate/15 px-3.5 py-2.5 text-sm rounded-sm outline-none focus:border-ledger-copper font-mono" />
           </div>
         </div>
+        {discountPreview !== null && (
+          <p className="text-xs text-ledger-sage -mt-3">
+            Buyers will see <strong>{discountPreview}% OFF</strong> (₹{form.mrp} → ₹{form.basePrice})
+          </p>
+        )}
         <div>
           <label className="block text-xs uppercase tracking-wider text-ledger-slate/50 mb-1.5">Starting stock</label>
           <input name="initialStock" type="number" min="0" value={form.initialStock} onChange={handleChange}

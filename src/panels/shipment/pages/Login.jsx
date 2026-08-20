@@ -18,7 +18,7 @@ export default function ShipmentLogin() {
     e.preventDefault();
     setError("");
     try {
-      const data = await login(loginForm.email, loginForm.password);
+      const data = await login(loginForm.email, loginForm.password, "DELIVERY_PARTNER");
       if (data.role !== "DELIVERY_PARTNER" && data.role !== "ADMIN") {
         logout();
         setError("This account isn't registered as a delivery partner. Use \"Register\" below.");
